@@ -1,0 +1,7 @@
+# Ignore virtual environments
+venv/
+*.pyc
+__pycache__/
+
+# Ignore node modules
+frontend/node_modules

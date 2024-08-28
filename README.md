@@ -8,7 +8,7 @@ trustworthiness of the deep learning models.
 Before you begin, ensure you have the following installed on your machine:
 
 - **Git**: Version control system to clone the repository.
-- **Python 3.8+**: Required for the Flask backend.
+- **Python: latest version Required for the Flask backend.
 - **Node.js and npm**: Required for the React frontend.
 - **pip**: Python package installer.
 

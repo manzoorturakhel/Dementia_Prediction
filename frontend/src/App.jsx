@@ -11,7 +11,11 @@ import XAI from "./components/XAI";
 import Footer from "./components/Footer";
 
 function App() {
-  const [img1, setImg1] = useState();
+  const [img1, setImg1] = useState(); 
+  // the img1 and img2 are used here because we send the data from Form component to XAI component
+  // as react only support one-way binding which is from parent to child not vice-versa but we can sent them using props
+  // as Form and XAI component are not directly related but both are used in APP.jsx we set the img1 and img2 data in APP.jsx 
+  //  from Form.jsx and then we send it from app.jsx to XAI.jsx to make an indirect connection between them
   const [img2, setImg2] = useState();
   const [option, setOption] = useState("");
 

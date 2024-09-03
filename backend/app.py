@@ -150,6 +150,7 @@ models = {
 
 # helper functions
 
+# this function converts the plot image  into base64 format and which are then sent to frontend to display
 def save_current_plot():
     # Save the current plot to a BytesIO object
     img_bytes = io.BytesIO()
@@ -170,7 +171,7 @@ def XAICam(img_path,camtype,ImageMode,model,size:list,target_layer):
     size: the size of the image to be precessed
     target_layer: the layer which produces the heatmap (usaully points to the final layers)
     """
-    if(ImageMode==1):
+    if(ImageMode==1): # we need to check this because our custom CNN model only accepts Gray images
         imageMode = ImageReadMode.GRAY
     else:
         imageMode = ImageReadMode.RGB
@@ -195,7 +196,8 @@ def XAICam(img_path,camtype,ImageMode,model,size:list,target_layer):
     if ImageMode ==1:
         
         
-        rgb_img = to_pil_image(img.repeat(3, 1, 1))
+        rgb_img = to_pil_image(img.repeat(3, 1, 1)) # as our custom cnn model accept only gray image and the overlay_mask only accepts
+        # rgb image we need to convert it to rgb to be accepted for overlay_mask
     else:
         
         rgb_img = to_pil_image(img)
@@ -217,6 +219,8 @@ def XAICam(img_path,camtype,ImageMode,model,size:list,target_layer):
     }
 
 #  Lime explanator requires a prediction function
+# this function is only needed for explainer.explain_instance
+# if we don't have this function the functionality of getting prediction and then display the result for LIME won't work
 def getPredictions(imgs,model):
     model_type= models[model]
     
@@ -256,7 +260,8 @@ def getPredictions(imgs,model):
     return prob.numpy()
 
 def LIMEExplanator (img,model):
-    if img.mode != 'RGB':
+    if img.mode != 'RGB': # if the incoming image is not in RGB it will convert it into RGB as explain_intance only accept images
+        # that are in RGB
         img = img.convert('RGB')
     img_arr = np.array(img)
     explainer = lime_image.LimeImageExplainer()
@@ -266,7 +271,6 @@ def LIMEExplanator (img,model):
                                          hide_color=0, # hidding part color (0 for black)
                                          num_samples=300)  # number of perturbed samples to explain
     # Let's use mask on image and see the areas that are encouraging the top prediction.
-    
     temp, mask = explanation.get_image_and_mask(explanation.top_labels[0], positive_only=True, num_features=5, hide_rest=False)
     img_boundry1 = mark_boundaries(temp/255.0, mask)
     
@@ -305,7 +309,6 @@ def LIMEExplanator (img,model):
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    print('hello from predict')
     # reading the content sent from frontend
     cam_type = request.form['XAI_technique']
     model_form = request.form['model']
@@ -315,32 +318,35 @@ def predict():
     if 'image' not in request.files:
         return jsonify({'error': 'No image provided'}), 400
     
-    image = request.files['image'].read()
-    img = Image.open(io.BytesIO(image))
-    if request.form['model']!='customCNN':
-        img = img.convert('RGB')
-        img_tensor = transform2(img).unsqueeze(0)
+    image = request.files['image'].read() # reading the image
+    img = Image.open(io.BytesIO(image)) # as the incoming image is byteIo formate we need to open it using this
+    if request.form['model']!='customCNN': # here we check if the model selected is not customCNN
+        img = img.convert('RGB') # we convert the image to rgb as the fine-tuned models accept images that are RGB not GRAY
+        img_tensor = transform2(img).unsqueeze(0) # transforming the image and adding batch dimension
         print(img_tensor.shape)
     else:
         # print('hello from yes customCNN')
         img_tensor = transform(img).unsqueeze(0)
          
-    with torch.inference_mode():
-        outputs = model_type(img_tensor)
+    with torch.inference_mode(): # although the models are already in eval form here we use the inference_mode to save memory, don't calculate the gradient again
+        # as the gradients were already calculated in training but now we are in deployment mode
+        outputs = model_type(img_tensor) # the outputs of the models are logits not actual values we need to convert them into probabilities
         # pred_prob = torch.softmax(outputs.squeeze(), dim=0)
-        _, predicted = torch.max(outputs, 1)
-        probabilities = torch.nn.functional.softmax(outputs, dim=1)
+        _, predicted = torch.max(outputs, 1) # finds the max value index
+        probabilities = torch.nn.functional.softmax(outputs, dim=1) # converts the raw logits into probabilities
 #         print(f"outputs:{outputs} predicted:{predicted} _:{_} prob:{probabilities} pred_prob:{pred_prob}")
     
-    predicted_class = predicted.item()
-    confidence = probabilities[0][predicted_class].item()
+    predicted_class = predicted.item() # getting the item from the predicted
+    confidence = probabilities[0][predicted_class].item() # getting the confidence value of the predicted class how confident is the
+    # model when it predicted that the image belongs to a certain class from 0 to 100%
     # Saving the file to a temporary place
     filename = secure_filename(request.files['image'].filename)
+    # the temporary file is stored in Upload_Folder
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    img.save(filepath)
+    img.save(filepath) # the image is saved to that directory
     
     try:
-        # Generating explanation using XAICam
+        # Generating explanation using XAI methods
         if request.form['model']=='customCNN':
             if request.form['XAI_technique'] =='LIME':
                 dict_file = LIMEExplanator(img=img,model=model_form)
@@ -359,7 +365,7 @@ def predict():
             
     
     finally:
-        os.remove(filepath)
+        os.remove(filepath) # as the files are temporary stored in the memory we need to remove it to save memory space
 
     return jsonify({
         'class': predicted_class,

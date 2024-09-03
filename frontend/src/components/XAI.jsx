@@ -1,7 +1,11 @@
 // import { useState } from "react";
 
 const XAI = ({ img1, img2, option }) => {
-  console.log("from XAI component", img1);
+  // console.log("from XAI component", img1);
+  // the img1 and img2 are sent from App.jsx 
+  // which doesn't directly uses it but as we need it in here and form.jsx and XAI.jsx are not directly connected we used app.jsx
+  // where both of these components lies and used it a brigde to communicate. although we could use global state using Redux or Context API
+  // but for simplifying things for this simple app we used in this style.
 
   return (
     <div className="p-6 flex flex-col justify-between">

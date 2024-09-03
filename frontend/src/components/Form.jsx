@@ -61,9 +61,12 @@ const Form = ({ sendData }) => {
     setModel(e.target.value);
   };
   const handleSubmit = async (event) => {
+    // this asynchronous function sents the data from frontend to the /predict api point
     console.log("on submit");
     event.preventDefault();
-    setIsLoading((pre) => !pre);
+    // whenever someone presses the upload image button the spinner will start loading until it gets the new result where it be back
+    // to false and stop running 
+    setIsLoading((pre) => !pre); 
 
     if (!file) {
       alert("Please select an image first!");
@@ -71,7 +74,10 @@ const Form = ({ sendData }) => {
     }
 
     const formData = new FormData();
-
+    //  we send three things to the /predict api point
+    // the image to process and do prediction on
+    // 2nd the model to choose when doing the prediction
+    // 3rd the XAI technique to use for interpretability
     formData.append("image", file);
     formData.append("model", model);
     formData.append("XAI_technique", optionSelected);
@@ -79,7 +85,7 @@ const Form = ({ sendData }) => {
     console.log(formData, file);
 
     try {
-      // setIsLoading((pre) => !pre);
+      // here we send the data using post method
       const response = await fetch("http://127.0.0.1:5000/predict", {
         method: "POST",
         body: formData,
@@ -88,12 +94,14 @@ const Form = ({ sendData }) => {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
+    //  after sending the data using the post method the post method will send us something back here we catch that result
       const result = await response.json();
       console.log("result", result);
       setPrediction(result);
 
-      sendData(result, optionSelected);
+      sendData(result, optionSelected); 
+      // this sendData is sent back to app.jsx which then sends it to XAI.jsx because XAI.jsx displays the base64 encoded images there
+      // the result contains the base64 images
     } catch (error) {
       console.error("Error:", error);
       alert("An error occurred during prediction.");

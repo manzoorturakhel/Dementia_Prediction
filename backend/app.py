@@ -347,6 +347,8 @@ def predict():
     
     try:
         # Generating explanation using XAI methods
+        # although the XAICAM method seems to implement the same thing but at the backend every cam_method provides different
+        # explanation
         if request.form['model']=='customCNN':
             if request.form['XAI_technique'] =='LIME':
                 dict_file = LIMEExplanator(img=img,model=model_form)
